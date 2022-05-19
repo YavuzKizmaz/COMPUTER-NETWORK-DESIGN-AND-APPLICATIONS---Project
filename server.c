@@ -154,3 +154,40 @@ void PrintUsage()
     exit(-1);
 }
 
+void FTPShell(int clientfd, struct sockaddr_in client_addr)
+{
+    char *client_ip = inet_ntoa(client_addr.sin_addr);
+    int client_port = ntohs(client_addr.sin_port);
+    int rcvn;
+    char recv_buffer[1024]={0};
+    char welcome[64] = "Welcome to the Yavuz's file server\n";
+
+    if (send(clientfd, welcome, 64, 0) < 0)
+    {
+        printf("[!]Could not send welcome message to \"%s:%d\"!\n", client_ip, client_port);
+        close(clientfd);
+        exit(-1);
+    }
+
+    do
+    {
+        memset(recv_buffer,0,1024);
+        rcvn = recv(clientfd, recv_buffer, 1024, 0);
+        if (rcvn > 0)
+        {
+            printf("[+]Command from \"%s:%d\" =>\t%s", client_ip, client_port, recv_buffer);
+            
+        }
+        else if (rcvn < 0)
+        {
+            printf("[!]Receive failed from \"%s:%d\"!\n", client_ip, client_port);
+            close(clientfd);
+            break;
+        }
+        else
+        {
+            printf("[-]Connection closing from \"%s:%d\"...\n", client_ip, client_port);
+        }
+
+    } while (rcvn > 0);
+}
