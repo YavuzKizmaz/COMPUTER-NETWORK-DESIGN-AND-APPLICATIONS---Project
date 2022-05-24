@@ -214,7 +214,8 @@ PUT <filename> (write to the given filename, EOF is \\r\\n.\\r\\n )\r\n";
                 send(newsockfd, send_buffer, 4096, 0);
                 break;
             case 4:
-                // delete function
+                Del(recv_buffer, send_buffer);
+                send(newsockfd, send_buffer, 4096, 0);
                 break;
             case 5:
                 Get(recv_buffer, send_buffer);
@@ -340,14 +341,14 @@ void Get(const char *recvbuff, char *sendbuff)
     {
         char buff[1024] = {0};
         memset(sendbuff, 0, 4096);
-        strcat(sendbuff,"This is ");
-        strcat(sendbuff,token);
-        strcat(sendbuff," content.\n");
+        strcat(sendbuff, "This is ");
+        strcat(sendbuff, token);
+        strcat(sendbuff, " content.\n");
         while (fgets(buff, 1024, fp) != NULL)
         {
-            strcat(sendbuff,buff);
+            strcat(sendbuff, buff);
         }
-        strcat(sendbuff,"\r\n.\r\n\n");
+        strcat(sendbuff, "\r\n.\r\n\n");
     }
     fclose(fp);
 
@@ -356,5 +357,41 @@ void Get(const char *recvbuff, char *sendbuff)
 
 void Del(const char *recvbuff, char *sendbuff)
 {
+    char *token = strtok(recvbuff, " ");
+    token = strtok(NULL, " ");
 
+    for (size_t i = 0; i < strlen(token); i++)
+    {
+        if (token[i] == 13 || token[i] == 10)
+        {
+            token[i] = 0;
+        }
+    }
+
+    char file[255];
+    strcpy(file, dir);
+    strcat(file, "/");
+    strcat(file, token);
+
+    FILE *fp = fopen(file, "r");
+    if (fp == NULL)
+    {
+        memset(sendbuff, 0, 4096);
+        strcat(sendbuff, "404 File ");
+        strcat(sendbuff, token);
+        strcat(sendbuff, " is not on the server.\r\n.\r\n");
+        return;
+    }
+    else
+    {
+        char buff[1024] = {0};
+        memset(sendbuff, 0, 4096);
+        remove(file);
+        strcat(sendbuff, "200 File ");
+        strcat(sendbuff, token);
+        strcat(sendbuff, " deleted.\r\n.\r\n\n");
+    }
+    fclose(fp);
+
+    return;
 }
