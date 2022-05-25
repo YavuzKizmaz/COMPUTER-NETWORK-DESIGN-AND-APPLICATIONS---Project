@@ -14,12 +14,15 @@ char *dir, *usrfile, *portC;
 int port;
 
 void PrintUsage();
-void FTPShell(int newsockfd, struct sockaddr_in client_addr);
-int CommandCheck(const char *command);
+void FTPShell(int, struct sockaddr_in);
+int CommandCheck(const char *);
+int FindFileSize(const char *);
+int CheckEOF(const char *);
 int User(const char *, char *);
 void List(char *);
 void Get(const char *, char *);
-void Del(const char *recvbuff, char *sendbuff);
+void Del(const char *, char *);
+void Put(char *, char *, int);
 
 int main(int argc, char **argv)
 {
@@ -244,7 +247,8 @@ Please use USER command to login!\r\n";
             case 6:
                 if (valid_user)
                 {
-                    // put function
+                    Put(recv_buffer, send_buffer, newsockfd);
+                    send(newsockfd, send_buffer, 4096, 0);
                 }
                 else
                     send(newsockfd, unvalid, 90, 0);
@@ -308,6 +312,37 @@ int CommandCheck(const char *command)
     return return_val;
 }
 
+int FindFileSize(const char *filename)
+{
+    int return_val = -1;
+    char fullpath[255];
+    strcpy(fullpath, dir);
+    strcat(fullpath, "/");
+    strcat(fullpath, filename);
+
+    FILE *fp = fopen(fullpath, "r");
+    if (fp == NULL)
+    {
+        return return_val;
+    }
+
+    fseek(fp, 0L, SEEK_END);
+    return_val = ftell(fp);
+    fclose(fp);
+    return return_val;
+}
+
+int CheckEOF(const char *buff)
+{
+    int return_val = 0;
+    if (!strcmp("\\r\\n.\\r\\n\n", buff) || !strcmp("\\r\\n.\\r\\n\r\n", buff))
+    {
+        return_val = 1;
+    }
+
+    return return_val;
+}
+
 void List(char *buff)
 {
     memset(buff, 0, 4096);
@@ -316,13 +351,14 @@ void List(char *buff)
     struct dirent *de;
     while ((de = readdir(dp)) != NULL)
     {
-        if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, ".."))
+        if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..") || de->d_type == 4)
             continue;
-        char s[8] = {0};
-        snprintf(s, 8, "%hu", de->d_reclen);
+        int size = FindFileSize(de->d_name);
+        char s_size[8] = {0};
+        snprintf(s_size, 8, "%d", size);
         strcat(buff, de->d_name);
         strcat(buff, "\t");
-        strcat(buff, s);
+        strcat(buff, s_size);
         strcat(buff, "\n");
     }
     strcat(buff, ".\r\n");
@@ -335,7 +371,7 @@ int User(const char *recvbuff, char *sendbuff)
     char *token = strtok(recvbuff, " ");
     r_name = strtok(NULL, " ");
     r_passwd = strtok(NULL, " ");
-    
+
     for (size_t i = 0; i < strlen(r_passwd); i++)
     {
         if (r_passwd[i] == 13 || r_passwd[i] == 10)
