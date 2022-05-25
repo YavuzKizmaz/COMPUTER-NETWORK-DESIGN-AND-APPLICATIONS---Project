@@ -272,12 +272,11 @@ Please use USER command to login!\r\n";
 int CommandCheck(const char *command)
 {
     int return_val;
-
-    if (strncmp("HELP\r", command, 5) == 0)
+    if (strncmp("HELP\n", command, 5) == 0)
     {
         return_val = 0;
     }
-    else if (strncmp("QUIT\r", command, 5) == 0)
+    else if (strncmp("QUIT\n", command, 5) == 0)
     {
         return_val = 1;
     }
@@ -285,7 +284,7 @@ int CommandCheck(const char *command)
     {
         return_val = 2;
     }
-    else if (strncmp("LIST\r", command, 5) == 0)
+    else if (strncmp("LIST\n", command, 5) == 0)
     {
         return_val = 3;
     }
@@ -336,9 +335,10 @@ int User(const char *recvbuff, char *sendbuff)
     char *token = strtok(recvbuff, " ");
     r_name = strtok(NULL, " ");
     r_passwd = strtok(NULL, " ");
+    
     for (size_t i = 0; i < strlen(r_passwd); i++)
     {
-        if (r_passwd[i] == 13 || r_passwd[i] == 13)
+        if (r_passwd[i] == 13 || r_passwd[i] == 10)
         {
             r_passwd[i] = 0;
         }
