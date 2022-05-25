@@ -178,12 +178,16 @@ DEL <filename> (delete the given filename)\n\
 GET <filename> (print the contents of given filename)\n\
 PUT <filename> (write to the given filename, EOF is \\r\\n.\\r\\n )\r\n";
 
+    const char *unvalid = "\nYou cannot use this command until you are logged in!\n\
+Please use USER command to login!\r\n";
+
     if (send(newsockfd, welcome, 36, 0) < 0)
     {
         printf("[!]Could not send welcome message to \"%s:%d\"!\n", client_ip, client_port);
         return;
     }
 
+    int valid_user = 0;
     do
     {
         memset(recv_buffer, 0, 4096);
@@ -207,22 +211,43 @@ PUT <filename> (write to the given filename, EOF is \\r\\n.\\r\\n )\r\n";
                 return;
                 break;
             case 2:
-                // user function
+                valid_user = User(recv_buffer, send_buffer);
+                send(newsockfd, send_buffer, 4096, 0);
                 break;
             case 3:
-                List(send_buffer);
-                send(newsockfd, send_buffer, 4096, 0);
+                if (valid_user)
+                {
+                    List(send_buffer);
+                    send(newsockfd, send_buffer, 4096, 0);
+                }
+                else
+                    send(newsockfd, unvalid, 90, 0);
                 break;
             case 4:
-                Del(recv_buffer, send_buffer);
-                send(newsockfd, send_buffer, 4096, 0);
+                if (valid_user)
+                {
+                    Del(recv_buffer, send_buffer);
+                    send(newsockfd, send_buffer, 4096, 0);
+                }
+                else
+                    send(newsockfd, unvalid, 90, 0);
                 break;
             case 5:
-                Get(recv_buffer, send_buffer);
-                send(newsockfd, send_buffer, 4096, 0);
+                if (valid_user)
+                {
+                    Get(recv_buffer, send_buffer);
+                    send(newsockfd, send_buffer, 4096, 0);
+                }
+                else
+                    send(newsockfd, unvalid, 90, 0);
                 break;
             case 6:
-                // put function
+                if (valid_user)
+                {
+                    // put function
+                }
+                else
+                    send(newsockfd, unvalid, 90, 0);
                 break;
             default:
                 send(newsockfd, "Unrecognized Command! Type HELP to see all commands\r\n", 54, 0);
@@ -307,6 +332,56 @@ void List(char *buff)
 
 int User(const char *recvbuff, char *sendbuff)
 {
+    char *r_name, *r_passwd;
+    char *token = strtok(recvbuff, " ");
+    r_name = strtok(NULL, " ");
+    r_passwd = strtok(NULL, " ");
+    for (size_t i = 0; i < strlen(r_passwd); i++)
+    {
+        if (r_passwd[i] == 13 || r_passwd[i] == 13)
+        {
+            r_passwd[i] = 0;
+        }
+    }
+
+    FILE *fp = fopen(usrfile, "r");
+    int return_val = 0;
+
+    char buff[255] = {0};
+    while (fgets(buff, 254, fp) != NULL)
+    {
+        char *l_name, *l_passwd;
+        l_name = strtok(buff, ":");
+        l_passwd = strtok(NULL, ":");
+
+        for (size_t i = 0; i < strlen(l_passwd); i++)
+        {
+            if (l_passwd[i] == 13 || l_passwd[i] == 10)
+            {
+                l_passwd[i] = 0;
+            }
+        }
+
+        if (!strcmp(l_name, r_name) && !strcmp(l_passwd, r_passwd))
+        {
+            memset(sendbuff, 0, 4096);
+            strcat(sendbuff, "200 User ");
+            strcat(sendbuff, r_name);
+            strcat(sendbuff, " granted access.\r\n\r\n");
+            return_val = 1;
+            break;
+            return return_val;
+        }
+    }
+    fclose(fp);
+
+    if (return_val == 0)
+    {
+        memset(sendbuff, 0, 4096);
+        strcat(sendbuff, "400 User not found. Please try with another user.\r\n\r\n");
+    }
+
+    return return_val;
 }
 
 void Get(const char *recvbuff, char *sendbuff)
