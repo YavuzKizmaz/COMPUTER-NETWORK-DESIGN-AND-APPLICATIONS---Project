@@ -160,7 +160,7 @@ int main(int argc, char **argv)
 
 void PrintUsage()
 {
-    printf("Help menu:\n-d <Directory of the file system>\n-p <PORT>\n-u <Password File>");
+    printf("Help menu:\n-d <Directory of the file system>\n-p <PORT>\n-u <Password File>\n");
     exit(-1);
 }
 
@@ -335,7 +335,7 @@ int FindFileSize(const char *filename)
 int CheckEOF(const char *buff)
 {
     int return_val = 0;
-    if (!strcmp("\\r\\n.\\r\\n\n", buff) || !strcmp("\\r\\n.\\r\\n\r\n", buff))
+    if (!strncmp("\\r\\n.\\r\\n\n", buff, 10))
     {
         return_val = 1;
     }
@@ -372,7 +372,8 @@ int User(const char *recvbuff, char *sendbuff)
     r_name = strtok(NULL, " ");
     r_passwd = strtok(NULL, " ");
 
-    for (size_t i = 0; i < strlen(r_passwd); i++)
+    int i;
+    for (i = 0; i < strlen(r_passwd); i++)
     {
         if (r_passwd[i] == 13 || r_passwd[i] == 10)
         {
@@ -390,11 +391,12 @@ int User(const char *recvbuff, char *sendbuff)
         l_name = strtok(buff, ":");
         l_passwd = strtok(NULL, ":");
 
-        for (size_t i = 0; i < strlen(l_passwd); i++)
+        int j;
+        for (j = 0; j < strlen(l_passwd); j++)
         {
-            if (l_passwd[i] == 13 || l_passwd[i] == 10)
+            if (l_passwd[j] == 13 || l_passwd[j] == 10)
             {
-                l_passwd[i] = 0;
+                l_passwd[j] = 0;
             }
         }
 
@@ -425,7 +427,8 @@ void Get(const char *recvbuff, char *sendbuff)
     char *token = strtok(recvbuff, " ");
     token = strtok(NULL, " ");
 
-    for (size_t i = 0; i < 100; i++)
+    int i;
+    for (i = 0; i < 100; i++)
     {
         if (token[i] == 13 || token[i] == 10)
         {
@@ -471,7 +474,8 @@ void Del(const char *recvbuff, char *sendbuff)
     char *token = strtok(recvbuff, " ");
     token = strtok(NULL, " ");
 
-    for (size_t i = 0; i < strlen(token); i++)
+    int i;
+    for (i = 0; i < strlen(token); i++)
     {
         if (token[i] == 13 || token[i] == 10)
         {
@@ -512,16 +516,16 @@ void Put(char *recvbuff, char *sendbuff, int sockfd)
     char *token = strtok(recvbuff, " ");
     token = strtok(NULL, " ");
 
-    for (size_t i = 0; i < strlen(token); i++)
+    int i;
+    for (i = 0; i < strlen(token); i++)
     {
         if (token[i] == 13 || token[i] == 10)
         {
             token[i] = 0;
         }
     }
-    char *tmp_filename;
+    char tmp_filename[255];
     strcpy(tmp_filename, token);
-    printf("%s\t%s\n", tmp_filename, token);
 
     char file[255];
     strcpy(file, dir);
@@ -531,11 +535,12 @@ void Put(char *recvbuff, char *sendbuff, int sockfd)
     FILE *fp = fopen(file, "w");
 
     int rcvn;
-    int i = 0;
+    int j = 0;
     do
     {
         memset(recvbuff, 0, 4096);
         rcvn = recv(sockfd, recvbuff, 4096, 0);
+
         if (CheckEOF(recvbuff))
         {
             break;
@@ -543,7 +548,7 @@ void Put(char *recvbuff, char *sendbuff, int sockfd)
         else
         {
             fputs(recvbuff, fp);
-            i += strlen(recvbuff);
+            j += strlen(recvbuff);
         }
 
     } while (1);
@@ -552,7 +557,7 @@ void Put(char *recvbuff, char *sendbuff, int sockfd)
     memset(sendbuff, 0, 4096);
     strcat(sendbuff, "\n.\n200 ");
     char s_size[8] = {0};
-    snprintf(s_size, 8, "%d", i);
+    snprintf(s_size, 8, "%d", j);
     strcat(sendbuff, s_size);
     strcat(sendbuff, " Byte file retrieved by the server and was saved.\n");
 }
